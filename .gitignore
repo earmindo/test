@@ -49,3 +49,7 @@ yarn-error.log*
 *.wav
 *.flac
 generated/
+
+# Secrets stores / credentials
+apps/mobile/google-service-account.json
+infra/certs/

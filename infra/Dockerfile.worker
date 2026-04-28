@@ -1,12 +1,30 @@
+# Pour GPU : remplacer la base par nvidia/cuda:12.1.0-runtime-ubuntu22.04
+# ── Build stage ──────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+COPY services/ai-worker/requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ── Runtime stage ─────────────────────────────────────────────
 FROM python:3.11-slim
 
-# Pour GPU : utiliser nvidia/cuda:12.1.0-runtime-ubuntu22.04 comme base
+RUN addgroup --system app && adduser --system --ingroup app app
+
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=builder /install /usr/local
+COPY services/ai-worker/ .
 
-COPY . .
+# Cache HuggingFace accessible en écriture
+RUN mkdir -p /cache && chown -R app:app /app /cache
+ENV HF_HOME=/cache
+
+USER app
 
 EXPOSE 8001
-CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8001"]
+
+HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3 \
+  CMD python -c "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"
+
+CMD ["uvicorn", "worker:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

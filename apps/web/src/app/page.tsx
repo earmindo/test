@@ -118,7 +118,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="text-center py-10 text-gray-600 text-sm">
+      <footer className="text-center py-10 text-gray-600 text-sm border-t border-gray-900 mt-10">
+        <div className="flex justify-center gap-6 mb-3">
+          <Link href="/pricing" className="hover:text-gray-400 transition-colors">Pricing</Link>
+          <Link href="/privacy" className="hover:text-gray-400 transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-gray-400 transition-colors">Terms</Link>
+          <a href="mailto:support@musicai.app" className="hover:text-gray-400 transition-colors">Contact</a>
+        </div>
         &copy; {new Date().getFullYear()} MusicAI. All rights reserved.
       </footer>
     </main>
