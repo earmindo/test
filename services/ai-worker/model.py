@@ -1,7 +1,11 @@
 import os
 import tempfile
-import torch
-from huggingface_hub import snapshot_download
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 from config import settings
 
@@ -18,7 +22,10 @@ def load_model():
     # ACE-Step utilise son propre pipeline disponible via HuggingFace
     # Le repo officiel : https://huggingface.co/ACE-Step/ACE-Step-v1-3.5B
     try:
+        if not HAS_TORCH:
+            raise ImportError("torch not available")
         from acestep.pipeline_ace_step import ACEStepPipeline
+        from huggingface_hub import snapshot_download
 
         model_path = snapshot_download(repo_id=settings.model_id)
         _pipeline = ACEStepPipeline.from_pretrained(model_path)
@@ -87,7 +94,7 @@ def _build_prompt(prompt: str, genre: str | None, bpm: int | None) -> str:
 
 
 def _generate_real(pipeline, prompt: str, duration: int, output_path: str) -> None:
-    with torch.inference_mode():
+    with torch.inference_mode():  # type: ignore[name-defined]
         pipeline(
             prompt=prompt,
             duration=duration,
