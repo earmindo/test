@@ -5,8 +5,12 @@ import type { Generation, GenerationRequest } from "@musicai/shared";
 interface GenerationsState {
   items: Generation[];
   loading: boolean;
+  loadingMore: boolean;
   generating: boolean;
+  page: number;
+  hasMore: boolean;
   fetch: () => Promise<void>;
+  fetchMore: () => Promise<void>;
   generate: (req: GenerationRequest) => Promise<string | null>;
   updateOne: (id: string, patch: Partial<Generation>) => void;
 }
@@ -14,15 +18,34 @@ interface GenerationsState {
 export const useGenerationsStore = create<GenerationsState>((set, get) => ({
   items: [],
   loading: false,
+  loadingMore: false,
   generating: false,
+  page: 1,
+  hasMore: false,
 
   fetch: async () => {
-    set({ loading: true });
+    set({ loading: true, page: 1 });
     try {
-      const { items } = await api.generations.list();
-      set({ items, loading: false });
+      const res = await api.generations.list(1);
+      const total = (res as unknown as { total: number }).total ?? res.items.length;
+      set({ items: res.items, loading: false, hasMore: res.items.length < total, page: 1 });
     } catch {
       set({ loading: false });
+    }
+  },
+
+  fetchMore: async () => {
+    const { page, loadingMore, hasMore, items } = get();
+    if (loadingMore || !hasMore) return;
+    const next = page + 1;
+    set({ loadingMore: true });
+    try {
+      const res = await api.generations.list(next);
+      const total = (res as unknown as { total: number }).total ?? res.items.length;
+      const merged = [...items, ...res.items];
+      set({ items: merged, loadingMore: false, page: next, hasMore: merged.length < total });
+    } catch {
+      set({ loadingMore: false });
     }
   },
 
@@ -30,7 +53,6 @@ export const useGenerationsStore = create<GenerationsState>((set, get) => ({
     set({ generating: true });
     try {
       const { generation_id } = await api.generations.create(req);
-      // Ajouter un placeholder optimiste
       const placeholder: Generation = {
         id: generation_id,
         userId: "",

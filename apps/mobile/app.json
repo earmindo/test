@@ -14,16 +14,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#030712"
     },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.musicai.app",
-      "buildNumber": "1",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "MusicAI uses the microphone to analyze audio.",
-        "NSAppleMusicUsageDescription": "MusicAI needs access to play your generated tracks.",
-        "UIBackgroundModes": ["audio"]
-      }
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -35,7 +25,32 @@
         "android.permission.INTERNET",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "musicai.app",
+              "pathPrefix": "/s"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.musicai.app",
+      "buildNumber": "1",
+      "associatedDomains": ["applinks:musicai.app"],
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "MusicAI uses the microphone to analyze audio.",
+        "NSAppleMusicUsageDescription": "MusicAI needs access to play your generated tracks.",
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "plugins": [
       "expo-router",

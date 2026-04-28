@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/auth";
@@ -33,7 +34,19 @@ export default function RootLayout() {
       }
     });
 
-    return () => listener.subscription.unsubscribe();
+    // Refresh session when app comes back to foreground
+    const appState = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        supabase.auth.startAutoRefresh();
+      } else {
+        supabase.auth.stopAutoRefresh();
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+      appState.remove();
+    };
   }, []);
 
   useEffect(() => {

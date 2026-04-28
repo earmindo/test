@@ -10,7 +10,7 @@ const GENRES = ["all", "electronic", "classical", "jazz", "rock", "hiphop", "amb
 const STATUSES = ["all", "done", "pending", "processing", "failed"] as const;
 
 export default function LibraryPage() {
-  const { items, loading, fetch } = useGenerationsStore();
+  const { items, loading, loadingMore, hasMore, fetch, fetchMore } = useGenerationsStore();
   const [search, setSearch] = useState("");
   const [genre, setGenre] = useState("all");
   const [status, setStatus] = useState<string>("all");
@@ -126,6 +126,18 @@ export default function LibraryPage() {
           <TrackCard key={gen.id} gen={gen} />
         ))}
       </div>
+
+      {hasMore && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={fetchMore}
+            disabled={loadingMore}
+            className="bg-gray-800 hover:bg-gray-700 border border-gray-700 px-6 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

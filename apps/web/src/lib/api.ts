@@ -26,7 +26,7 @@ export const api = {
     get: (id: string): Promise<Generation> =>
       http.get(`/generate/${id}`).then((r) => r.data),
 
-    list: (page = 1): Promise<{ items: Generation[]; page: number }> =>
+    list: (page = 1): Promise<{ items: Generation[]; page: number; total: number }> =>
       http.get("/generate", { params: { page } }).then((r) => r.data),
   },
 

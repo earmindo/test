@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from auth import get_current_user
 from config import settings
@@ -146,6 +146,12 @@ async def list_generations(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     offset = (page - 1) * per_page
+
+    total_result = await db.execute(
+        select(func.count(Generation.id)).where(Generation.user_id == user.id)
+    )
+    total = total_result.scalar_one()
+
     result = await db.execute(
         select(Generation)
         .where(Generation.user_id == user.id)
@@ -161,11 +167,20 @@ async def list_generations(
                 "id": g.id,
                 "prompt": g.prompt,
                 "status": g.status,
+                "duration": g.duration,
+                "genre": g.genre,
+                "bpm": g.bpm,
+                "format": g.format,
+                "stems": g.stems,
                 "audio_url": g.audio_url,
+                "stem_urls": g.stem_urls,
+                "error_message": g.error_message,
                 "created_at": g.created_at.isoformat(),
+                "completed_at": g.completed_at.isoformat() if g.completed_at else None,
             }
             for g in generations
         ],
         "page": page,
         "per_page": per_page,
+        "total": total,
     }
