@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "MusicAI",
+    "slug": "musicai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#030712"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.musicai.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#030712"
+      },
+      "package": "com.musicai.app"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-av",
+      "expo-secure-store"
+    ],
+    "scheme": "musicai"
+  }
+}

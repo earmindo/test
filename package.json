@@ -1,0 +1,21 @@
+{
+  "name": "musicai",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "yarn workspace @musicai/web dev",
+    "dev:mobile": "yarn workspace @musicai/mobile start",
+    "dev:api": "yarn workspace @musicai/api dev",
+    "build:web": "yarn workspace @musicai/web build",
+    "lint": "yarn workspaces run lint",
+    "type-check": "yarn workspaces run type-check"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "yarn@4.1.1"
+}

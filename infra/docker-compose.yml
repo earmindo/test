@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: musicai
+      POSTGRES_PASSWORD: musicai
+      POSTGRES_DB: musicai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musicai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: ../../infra/Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../apps/api/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../apps/api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  ai-worker:
+    build:
+      context: ../services/ai-worker
+      dockerfile: ../../infra/Dockerfile.worker
+    ports:
+      - "8001:8001"
+    env_file:
+      - ../services/ai-worker/.env
+    depends_on:
+      - redis
+    volumes:
+      - ../services/ai-worker:/app
+      - model_cache:/root/.cache/huggingface
+    command: uvicorn worker:app --host 0.0.0.0 --port 8001 --reload
+    # Pour GPU : décommenter les lignes suivantes
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ../../infra/Dockerfile.web
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../apps/web/.env
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: yarn dev
+
+volumes:
+  postgres_data:
+  model_cache:
