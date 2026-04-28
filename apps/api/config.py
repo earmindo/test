@@ -23,11 +23,18 @@ class Settings(BaseSettings):
 
     ai_worker_url: str
     jwt_secret: str
+    # Dedicated secret for worker→api internal calls. Falls back to jwt_secret if unset.
+    internal_secret: str = ""
     cors_origins: str = "http://localhost:3000"
     revenuecat_webhook_secret: str = ""
     resend_api_key: str = ""
     app_url: str = "https://musicai.app"
-    admin_secret: str = "change-me-admin-secret"
+    # Must be overridden in production — no sane default to prevent accidents.
+    admin_secret: str = ""
+
+    @property
+    def effective_internal_secret(self) -> str:
+        return self.internal_secret or self.jwt_secret
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -22,7 +22,7 @@ class GenerationCompletePayload(BaseModel):
 
 
 def _verify_internal(x_internal_secret: str = Header(...)) -> None:
-    if x_internal_secret != settings.jwt_secret:
+    if x_internal_secret != settings.effective_internal_secret:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 

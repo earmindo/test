@@ -30,7 +30,7 @@ async def test_generation_complete_success(client: AsyncClient, free_user, db):
             "error_message": None,
             "completed_at": datetime.now(timezone.utc).isoformat(),
         },
-        headers={"X-Internal-Secret": settings.jwt_secret},
+        headers={"X-Internal-Secret": settings.effective_internal_secret},
     )
 
     assert resp.status_code == 200
@@ -62,7 +62,7 @@ async def test_generation_complete_not_found(client: AsyncClient):
             "status": "done",
             "completed_at": datetime.now(timezone.utc).isoformat(),
         },
-        headers={"X-Internal-Secret": settings.jwt_secret},
+        headers={"X-Internal-Secret": settings.effective_internal_secret},
     )
     assert resp.status_code == 404
 
