@@ -1,35 +1,82 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as SecureStore from "expo-secure-store";
+import { supabase } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { useUserStore } from "@/stores/userStore";
 import { PLAN_FEATURES } from "@musicai/shared";
+import {
+  getOfferings, purchasePackage, restorePurchases, getPlan, getCustomerInfo,
+} from "@/lib/purchases";
+import type { PurchasesPackage } from "react-native-purchases";
 
-type UserData = { email: string; name: string | null; plan: string; generations_today: number };
-
-const PLAN_COLORS = { free: "#6b7280", pro: "#6366f1", studio: "#7c3aed" };
+const PLAN_COLORS = { free: "#6b7280", pro: "#6366f1", studio: "#7c3aed" } as const;
 
 export default function ProfileScreen() {
-  const [user, setUser] = useState<UserData | null>(null);
+  const { user, fetch: fetchUser } = useUserStore();
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
-    api.users.me().then(setUser).catch(() => {});
+    fetchUser();
+    loadOfferings();
   }, []);
 
-  async function logout() {
+  async function loadOfferings() {
+    try {
+      const pkgs = await getOfferings();
+      setPackages(pkgs);
+    } catch {}
+  }
+
+  async function handlePurchase(pkg: PurchasesPackage) {
+    setPurchasing(true);
+    try {
+      const info = await purchasePackage(pkg);
+      const newPlan = getPlan(info);
+      Alert.alert("Success", `You are now on the ${newPlan} plan!`);
+      fetchUser();
+    } catch (e: any) {
+      if (!e.userCancelled) Alert.alert("Purchase failed", e.message);
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
+  async function handleRestore() {
+    setRestoring(true);
+    try {
+      const info = await restorePurchases();
+      const plan = getPlan(info);
+      Alert.alert("Restored", plan !== "free" ? `Restored ${plan} plan.` : "No active subscription found.");
+      fetchUser();
+    } catch {
+      Alert.alert("Error", "Could not restore purchases.");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  async function handleLogout() {
     Alert.alert("Logout", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Logout",
-        style: "destructive",
+        text: "Logout", style: "destructive",
         onPress: async () => {
-          await SecureStore.deleteItemAsync("access_token");
+          await supabase.auth.signOut();
+          useUserStore.getState().clear();
         },
       },
     ]);
   }
 
-  if (!user) return null;
+  if (!user) {
+    return <View style={styles.center}><ActivityIndicator color="#6366f1" size="large" /></View>;
+  }
 
   const plan = user.plan as "free" | "pro" | "studio";
   const features = PLAN_FEATURES[plan];
@@ -37,7 +84,8 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Avatar */}
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{(user.name ?? user.email)[0].toUpperCase()}</Text>
         </View>
@@ -45,98 +93,95 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{user.email}</Text>
 
         <View style={[styles.planBadge, { backgroundColor: `${planColor}22`, borderColor: planColor }]}>
-          <Text style={[styles.planText, { color: planColor }]}>{plan.toUpperCase()} PLAN</Text>
+          <Text style={[styles.planText, { color: planColor }]}>{plan.toUpperCase()}</Text>
         </View>
 
+        {/* Stats */}
         <View style={styles.statsCard}>
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{user.generations_today}</Text>
-            <Text style={styles.statLabel}>Today</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>
-              {features.generationsPerDay === "unlimited" ? "∞" : features.generationsPerDay}
-            </Text>
-            <Text style={styles.statLabel}>Daily limit</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.stat}>
-            <Text style={styles.statValue}>{features.maxDuration}s</Text>
-            <Text style={styles.statLabel}>Max duration</Text>
-          </View>
+          {[
+            [String(user.generations_today), "Today"],
+            [features.generationsPerDay === "unlimited" ? "∞" : String(features.generationsPerDay), "Daily limit"],
+            [`${features.maxDuration}s`, "Max duration"],
+          ].map(([val, label], i) => (
+            <View key={label} style={[styles.stat, i > 0 && { borderLeftWidth: 1, borderLeftColor: "#1f2937" }]}>
+              <Text style={styles.statValue}>{val}</Text>
+              <Text style={styles.statLabel}>{label}</Text>
+            </View>
+          ))}
         </View>
 
-        {plan === "free" && (
-          <TouchableOpacity style={styles.upgradeButton}>
-            <Text style={styles.upgradeText}>Upgrade to Pro</Text>
-          </TouchableOpacity>
+        {/* Plans disponibles si free */}
+        {plan === "free" && packages.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Upgrade</Text>
+            {packages.map((pkg) => (
+              <TouchableOpacity
+                key={pkg.identifier}
+                style={styles.packageCard}
+                onPress={() => handlePurchase(pkg)}
+                disabled={purchasing}
+              >
+                <View>
+                  <Text style={styles.packageName}>{pkg.product.title}</Text>
+                  <Text style={styles.packageDesc} numberOfLines={1}>{pkg.product.description}</Text>
+                </View>
+                <Text style={styles.packagePrice}>
+                  {purchasing ? "…" : pkg.product.priceString}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        {/* Restore */}
+        <TouchableOpacity style={styles.restoreBtn} onPress={handleRestore} disabled={restoring}>
+          <Text style={styles.restoreText}>{restoring ? "Restoring…" : "Restore purchases"}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#030712" },
-  content: { flex: 1, alignItems: "center", padding: 24 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#030712" },
+  content: { alignItems: "center", padding: 24, paddingBottom: 40 },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#312e81",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 12,
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: "#312e81", justifyContent: "center", alignItems: "center",
+    marginTop: 20, marginBottom: 12,
   },
   avatarText: { color: "#a5b4fc", fontSize: 32, fontWeight: "700" },
   name: { color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 4 },
   email: { color: "#6b7280", fontSize: 14, marginBottom: 16 },
-  planBadge: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginBottom: 24,
-  },
+  planBadge: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 24 },
   planText: { fontWeight: "700", fontSize: 13 },
   statsCard: {
-    flexDirection: "row",
-    backgroundColor: "#111827",
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#1f2937",
-    width: "100%",
-    marginBottom: 24,
+    flexDirection: "row", backgroundColor: "#111827", borderRadius: 16,
+    padding: 20, borderWidth: 1, borderColor: "#1f2937", width: "100%", marginBottom: 24,
   },
   stat: { flex: 1, alignItems: "center" },
-  statValue: { color: "#fff", fontSize: 24, fontWeight: "700" },
-  statLabel: { color: "#6b7280", fontSize: 12, marginTop: 2 },
-  divider: { width: 1, backgroundColor: "#1f2937" },
-  upgradeButton: {
-    backgroundColor: "#4f46e5",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginBottom: 12,
-    width: "100%",
-    alignItems: "center",
+  statValue: { color: "#fff", fontSize: 22, fontWeight: "700" },
+  statLabel: { color: "#6b7280", fontSize: 11, marginTop: 2 },
+  section: { width: "100%", marginBottom: 16 },
+  sectionTitle: { color: "#fff", fontWeight: "700", fontSize: 16, marginBottom: 10 },
+  packageCard: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: "#111827", borderRadius: 14, padding: 16,
+    borderWidth: 1, borderColor: "#312e81", marginBottom: 8,
   },
-  upgradeText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: "#374151",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    width: "100%",
-    alignItems: "center",
+  packageName: { color: "#fff", fontWeight: "600", fontSize: 15, marginBottom: 2 },
+  packageDesc: { color: "#6b7280", fontSize: 12 },
+  packagePrice: { color: "#a5b4fc", fontWeight: "700", fontSize: 16 },
+  restoreBtn: { paddingVertical: 12, marginBottom: 8 },
+  restoreText: { color: "#6b7280", fontSize: 13 },
+  logoutBtn: {
+    borderWidth: 1, borderColor: "#374151", borderRadius: 14,
+    paddingVertical: 14, paddingHorizontal: 32, width: "100%", alignItems: "center", marginTop: 8,
   },
   logoutText: { color: "#6b7280", fontSize: 16 },
 });

@@ -27,6 +27,10 @@ class CheckoutRequest(BaseModel):
     cancel_url: str
 
 
+class PortalRequest(BaseModel):
+    return_url: str
+
+
 @router.post("/checkout")
 async def create_checkout(
     body: CheckoutRequest,
@@ -56,6 +60,26 @@ async def create_checkout(
     return {"checkout_url": session.url}
 
 
+@router.post("/portal")
+async def create_billing_portal(
+    body: PortalRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    result = await db.execute(select(Subscription).where(Subscription.user_id == user.id))
+    sub = result.scalar_one_or_none()
+
+    if not sub:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No subscription found")
+
+    session = stripe.billing_portal.Session.create(
+        customer=sub.stripe_customer_id,
+        return_url=body.return_url,
+    )
+
+    return {"portal_url": session.url}
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -> dict:
     payload = await request.body()
@@ -67,12 +91,9 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)) -
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        await _handle_checkout_completed(session, db)
-
+        await _handle_checkout_completed(event["data"]["object"], db)
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
-        stripe_sub = event["data"]["object"]
-        await _handle_subscription_updated(stripe_sub, db)
+        await _handle_subscription_updated(event["data"]["object"], db)
 
     return {"ok": True}
 
@@ -155,7 +176,7 @@ async def get_my_subscription(
         "plan": user.plan,
         "subscription": {
             "status": sub.status,
-            "current_period_end": sub.current_period_end.isoformat() if sub and sub.current_period_end else None,
-            "cancel_at_period_end": sub.cancel_at_period_end if sub else False,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+            "cancel_at_period_end": sub.cancel_at_period_end,
         } if sub else None,
     }

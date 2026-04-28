@@ -1,6 +1,6 @@
 import axios from "axios";
 import { supabase } from "./supabase";
-import type { Generation, GenerationRequest, User, Subscription } from "@musicai/shared";
+import type { Generation, GenerationRequest, User } from "@musicai/shared";
 
 const http = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/v1",
@@ -31,7 +31,7 @@ export const api = {
   },
 
   subscriptions: {
-    me: (): Promise<{ plan: string; subscription: Subscription | null }> =>
+    me: (): Promise<{ plan: string; subscription: { status: string; current_period_end: string | null; cancel_at_period_end: boolean } | null }> =>
       http.get("/subscriptions/me").then((r) => r.data),
 
     checkout: (priceKey: string, successUrl: string, cancelUrl: string): Promise<{ checkout_url: string }> =>
@@ -40,5 +40,8 @@ export const api = {
         success_url: successUrl,
         cancel_url: cancelUrl,
       }).then((r) => r.data),
+
+    portal: (returnUrl: string): Promise<{ portal_url: string }> =>
+      http.post("/subscriptions/portal", { return_url: returnUrl }).then((r) => r.data),
   },
 };

@@ -12,6 +12,8 @@ import {
 import { Audio } from "expo-av";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
+import { useGenerationsStore } from "@/stores/generationsStore";
+import { notifyMusicReady } from "@/lib/notifications";
 import type { Generation } from "@musicai/shared";
 
 type Status = "idle" | "loading" | "polling" | "done" | "failed";
@@ -48,6 +50,9 @@ export default function GenerateScreen() {
           clearInterval(pollRef.current!);
           setResult(gen);
           setStatus(gen.status === "done" ? "done" : "failed");
+          if (gen.status === "done") {
+            notifyMusicReady(prompt).catch(() => {});
+          }
         }
       }, 2000);
     } catch {
