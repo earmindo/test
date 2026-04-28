@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     ai_worker_url: str
     jwt_secret: str
     cors_origins: str = "http://localhost:3000"
+    revenuecat_webhook_secret: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

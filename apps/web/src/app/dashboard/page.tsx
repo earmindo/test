@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { useGenerationsStore } from "@/stores/generationsStore";
 import { useUserStore } from "@/stores/userStore";
 import { UpgradeModal } from "@/components/UpgradeModal";
+import { AudioPlayer } from "@/components/AudioPlayer";
 import type { Generation } from "@musicai/shared";
 
 const GENRES = ["electronic", "classical", "jazz", "rock", "hiphop", "ambient", "pop"];
@@ -134,12 +135,8 @@ export default function DashboardPage() {
 
       {/* Résultat en cours */}
       {currentGen && currentGen.status === "done" && currentGen.audioUrl && (
-        <div className="bg-gray-900 rounded-2xl p-6 border border-brand-500/50 mb-8">
-          <p className="text-sm text-gray-400 mb-3 italic">"{currentGen.prompt}"</p>
-          <audio controls src={currentGen.audioUrl} className="w-full mb-3" />
-          <a href={currentGen.audioUrl} download className="text-sm text-brand-400 hover:text-brand-300">
-            Download MP3
-          </a>
+        <div className="mb-8">
+          <AudioPlayer src={currentGen.audioUrl} prompt={currentGen.prompt} />
         </div>
       )}
 
@@ -179,7 +176,9 @@ function GenerationCard({ gen }: { gen: Generation }) {
         </span>
       </div>
       {gen.audioUrl && (
-        <audio controls src={gen.audioUrl} className="w-full mt-2" />
+        <div className="mt-3">
+          <AudioPlayer src={gen.audioUrl} />
+        </div>
       )}
     </div>
   );

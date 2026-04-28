@@ -1,8 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from config import settings
-from routers import generate, internal, subscriptions, users
+from limiter import limiter
+from routers import generate, internal, revenuecat, subscriptions, users
 
 app = FastAPI(
     title="MusicAI API",
@@ -10,6 +15,11 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url=None,
 )
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +33,7 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(generate.router, prefix="/api/v1")
 app.include_router(subscriptions.router, prefix="/api/v1")
 app.include_router(internal.router, prefix="/api/v1")
+app.include_router(revenuecat.router, prefix="/api/v1")
 
 
 @app.get("/health")

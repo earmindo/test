@@ -4,15 +4,21 @@ import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/lib/auth";
 import { initPurchases } from "@/lib/purchases";
 import { registerForPushNotifications } from "@/lib/notifications";
+import { isOnboardingDone } from "@/lib/onboarding";
 import type { Session } from "@supabase/supabase-js";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [onboarded, setOnboarded] = useState<boolean | undefined>(undefined);
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    Promise.all([
+      supabase.auth.getSession(),
+      isOnboardingDone(),
+    ]).then(([{ data }, done]) => {
+      setOnboarded(done);
       setSession(data.session);
       if (data.session?.user) {
         initPurchases(data.session.user.id).catch(() => {});
@@ -31,13 +37,20 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (session === undefined || onboarded === undefined) return;
     const inAuthGroup = segments[0] === "(auth)";
-    if (!session && !inAuthGroup) router.replace("/(auth)/login");
-    else if (session && inAuthGroup) router.replace("/(tabs)");
-  }, [session, segments]);
+    const inOnboarding = segments[0] === "onboarding";
 
-  if (session === undefined) return null;
+    if (!onboarded && !inOnboarding) {
+      router.replace("/onboarding");
+    } else if (!session && !inAuthGroup && !inOnboarding) {
+      router.replace("/(auth)/login");
+    } else if (session && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [session, onboarded, segments]);
+
+  if (session === undefined || onboarded === undefined) return null;
 
   return (
     <>

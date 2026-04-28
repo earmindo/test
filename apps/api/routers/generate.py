@@ -1,6 +1,6 @@
 import httpx
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +8,7 @@ from sqlalchemy import select
 from auth import get_current_user
 from config import settings
 from database import get_db
+from limiter import limiter
 from models import Generation, User
 
 router = APIRouter(prefix="/generate", tags=["generation"])
@@ -53,8 +54,10 @@ async def _submit_to_worker(generation_id: str, request: GenerateRequest) -> Non
 
 
 @router.post("", response_model=GenerateResponse, status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("30/minute")
 async def create_generation(
-    request: GenerateRequest,
+    request: Request,
+    body: GenerateRequest,
     background_tasks: BackgroundTasks,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -75,14 +78,14 @@ async def create_generation(
         )
 
     # Vérification durée
-    if request.duration > limits["max_duration"]:
+    if body.duration > limits["max_duration"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Max duration for {user.plan} plan is {limits['max_duration']}s.",
         )
 
     # Vérification stems
-    if request.stems and not limits["stems"]:
+    if body.stems and not limits["stems"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Stems are only available on the Studio plan.",
@@ -90,12 +93,12 @@ async def create_generation(
 
     generation = Generation(
         user_id=user.id,
-        prompt=request.prompt,
-        duration=request.duration,
-        genre=request.genre,
-        bpm=request.bpm,
-        format=request.format,
-        stems=request.stems,
+        prompt=body.prompt,
+        duration=body.duration,
+        genre=body.genre,
+        bpm=body.bpm,
+        format=body.format,
+        stems=body.stems,
         status="pending",
     )
     db.add(generation)
@@ -103,7 +106,7 @@ async def create_generation(
     await db.commit()
     await db.refresh(generation)
 
-    background_tasks.add_task(_submit_to_worker, generation.id, request)
+    background_tasks.add_task(_submit_to_worker, generation.id, body)
 
     return GenerateResponse(generation_id=generation.id, status="pending")
 
