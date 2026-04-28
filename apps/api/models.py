@@ -42,6 +42,7 @@ class Generation(Base):
     audio_url: Mapped[str | None] = mapped_column(String, nullable=True)
     stem_urls: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String, nullable=True)
+    share_token: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

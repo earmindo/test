@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from config import settings
 from database import get_db
+from emails import send_welcome
 from models import User
 
 bearer = HTTPBearer()
@@ -38,5 +39,10 @@ async def get_current_user(
         db.add(user)
         await db.commit()
         await db.refresh(user)
+        # Email de bienvenue en arrière-plan (non bloquant)
+        try:
+            send_welcome(user.email, user.name)
+        except Exception:
+            pass
 
     return user

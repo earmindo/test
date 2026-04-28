@@ -7,6 +7,7 @@ from sqlalchemy import select
 from auth import get_current_user
 from config import settings
 from database import get_db
+from emails import send_subscription_confirmed
 from models import User, Subscription
 
 stripe.api_key = settings.stripe_secret_key
@@ -129,6 +130,10 @@ async def _handle_checkout_completed(session: dict, db: AsyncSession) -> None:
     user = result2.scalar_one_or_none()
     if user:
         user.plan = plan
+        try:
+            send_subscription_confirmed(user.email, plan)
+        except Exception:
+            pass
 
     await db.commit()
 

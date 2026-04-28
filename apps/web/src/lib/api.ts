@@ -44,4 +44,9 @@ export const api = {
     portal: (returnUrl: string): Promise<{ portal_url: string }> =>
       http.post("/subscriptions/portal", { return_url: returnUrl }).then((r) => r.data),
   },
+
+  share: {
+    create: (generationId: string): Promise<{ share_token: string }> =>
+      http.post(`/share/${generationId}`).then((r) => r.data),
+  },
 };

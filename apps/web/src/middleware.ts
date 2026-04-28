@@ -2,6 +2,7 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { NextRequest, NextResponse } from "next/server";
 
 const PROTECTED = ["/dashboard", "/settings"];
+// /admin est protégé par son propre mot de passe côté client
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();

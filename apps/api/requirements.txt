@@ -15,6 +15,7 @@ alembic==1.13.1
 python-multipart==0.0.9
 slowapi==0.1.9
 limits==3.13.0
+resend==0.8.0
 
 # Dev / test
 pytest==8.2.0

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     jwt_secret: str
     cors_origins: str = "http://localhost:3000"
     revenuecat_webhook_secret: str = ""
+    resend_api_key: str = ""
+    app_url: str = "https://musicai.app"
+    admin_secret: str = "change-me-admin-secret"
 
     @property
     def cors_origins_list(self) -> list[str]:

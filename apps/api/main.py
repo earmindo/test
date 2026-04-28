@@ -7,7 +7,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from config import settings
 from limiter import limiter
-from routers import generate, internal, revenuecat, subscriptions, users
+from routers import admin, generate, internal, revenuecat, share, subscriptions, users
 
 app = FastAPI(
     title="MusicAI API",
@@ -34,6 +34,8 @@ app.include_router(generate.router, prefix="/api/v1")
 app.include_router(subscriptions.router, prefix="/api/v1")
 app.include_router(internal.router, prefix="/api/v1")
 app.include_router(revenuecat.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
+app.include_router(share.router, prefix="/api/v1")
 
 
 @app.get("/health")

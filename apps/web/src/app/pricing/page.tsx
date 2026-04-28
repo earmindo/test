@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PLAN_FEATURES, PLAN_PRICES } from "@musicai/shared";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Pricing",
+  description: "Simple, transparent pricing. Start free with 3 generations/day. Upgrade to Pro or Studio for unlimited music creation.",
+  openGraph: { title: "MusicAI Pricing", url: "/pricing" },
+});
 
 const FEATURES_LABELS = [
   { key: "generationsPerDay", label: "Generations per day" },

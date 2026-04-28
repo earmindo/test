@@ -38,6 +38,9 @@ export function Navbar() {
             {user.plan}
           </span>
         )}
+        <Link href="/dashboard/library" className="text-sm text-gray-400 hover:text-white transition-colors">
+          Library
+        </Link>
         <Link href="/settings" className="text-sm text-gray-400 hover:text-white transition-colors">
           Settings
         </Link>

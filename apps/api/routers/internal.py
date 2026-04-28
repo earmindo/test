@@ -6,7 +6,8 @@ from sqlalchemy import select
 
 from config import settings
 from database import get_db
-from models import Generation
+from emails import send_generation_complete
+from models import Generation, User
 
 router = APIRouter(prefix="/internal", tags=["internal"])
 
@@ -41,6 +42,16 @@ async def generation_complete(
     generation.stem_urls = payload.stem_urls
     generation.error_message = payload.error_message
     generation.completed_at = datetime.fromisoformat(payload.completed_at)
-
     await db.commit()
+
+    # Envoyer l'email de notification si succès
+    if payload.status == "done" and payload.audio_url:
+        user_result = await db.execute(select(User).where(User.id == generation.user_id))
+        user = user_result.scalar_one_or_none()
+        if user:
+            try:
+                send_generation_complete(user.email, generation.prompt, payload.audio_url)
+            except Exception:
+                pass
+
     return {"ok": True}
