@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
-from routers import generate, subscriptions, users
+from routers import generate, internal, subscriptions, users
 
 app = FastAPI(
     title="MusicAI API",
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(generate.router, prefix="/api/v1")
 app.include_router(subscriptions.router, prefix="/api/v1")
+app.include_router(internal.router, prefix="/api/v1")
 
 
 @app.get("/health")
